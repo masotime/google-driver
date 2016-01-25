@@ -4,7 +4,7 @@
   "description": "yet another library to interface with Google Drive",
   "main": "lib/index.js",
   "scripts": {
-    "compile": "babel --presets es2015,stage-0,react,syntax-async-functions,transform-regenerator -d lib/ src/",
+    "compile": "babel --presets es2015,stage-0,react -d lib/ src/",
     "prepublish": "npm run compile",
     "test": "mocha --compilers js:babel-core/register  --require babel-polyfill --timeout 20000"
   },

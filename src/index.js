@@ -8,12 +8,31 @@ const OAUTH_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token';
 const OAUTH_PLAYGROUND_URL = 'https://developers.google.com/oauthplayground';
 const bufferFile = Promise.promisify(fs.readFile);
 
+const maybeHasParent = (resource, folderId) => {
+	if (folderId) {
+		resource.parents = [
+			{ kind: 'drive#parentReference', id: folderId }
+		];
+	}
+
+	return resource;
+}
+
 export default class GoogleDrive {
 
 	constructor({CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN}) {
 		this.CLIENT_ID = CLIENT_ID;
 		this.CLIENT_SECRET = CLIENT_SECRET;
 		this.REFRESH_TOKEN = REFRESH_TOKEN;
+
+		const self = this; // sigh
+
+		this.withContext = async fn => {
+			self.authClient = self.authClient || await self.getAuthClient();
+			self.driveClient = self.driveClient || await self.getDriveClient();
+
+			return await fn(self.driveClient, self.authClient);
+		};
 	}
 
 	getAuthClient() {
@@ -62,9 +81,6 @@ export default class GoogleDrive {
 	uploadCommand(drive, auth, mimeType, content, resource) {
 
 		return new Promise( (resolve, reject) => {
-			// console.warn('Increasing process.maxTickDepth to 10000 to avoid problems when uploading huge files');
-			// console.warn('Please refer to obscure log at http://logs.nodejs.org/libuv/2013-05-23');
-			// process.maxTickDepth = 10000;
 			drive.files
 				.insert({
 					resource,
@@ -149,7 +165,10 @@ export default class GoogleDrive {
 			});
 	}
 
-	// returns a client
+	deleteAll(title, folderId) {
+		return this.withContext( (drive, auth) => this.deleteAllCommand(drive, auth, title, folderId));
+	}
+
 	upload(filename, mimeType, folderId) {
 
 		const resource = { title: filename, mimeType };
@@ -169,6 +188,21 @@ export default class GoogleDrive {
 				return Promise.all([bufferPromise, deleteExisting])
 					.spread(buffer => this.uploadCommand(drive, auth, mimeType, buffer, resource));
 			});
+	}
+
+	createFolder(foldername, folderId) {
+		return this.withContext( (drive, auth) => drive.files.insert(maybeHasParent({
+			resource: {
+				title: foldername,
+				mimeType: 'application/vnd.google-apps.folder'
+			},
+			auth: auth,
+			fields: [ 'id' ]
+		}, folderId)));
+	}
+
+	search(name, folderId) {
+		return this.withContext( (drive, auth) => this.searchCommand(drive, auth, name, folderId));
 	}
 
 }
