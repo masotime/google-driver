@@ -1,6 +1,6 @@
 {
   "name": "google-driver",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "yet another library to interface with Google Drive",
   "main": "lib/index.js",
   "scripts": {
