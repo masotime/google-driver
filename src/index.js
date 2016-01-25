@@ -78,7 +78,7 @@ export default class GoogleDrive {
 		return Promise.resolve(googleapis.drive('v2'));
 	}
 
-	uploadCommand(drive, auth, mimeType, content, resource) {
+	createCommand(drive, auth, mimeType, content, resource) {
 
 		return new Promise( (resolve, reject) => {
 			drive.files
@@ -171,7 +171,13 @@ export default class GoogleDrive {
 
 	upload(filename, mimeType, folderId) {
 
-		const resource = { title: filename, mimeType };
+		if (!filename || /([^\/\\])+$/.exec(filename) === null) {
+			return Promise.reject(new Error(`${filename} is not a valid filename`));
+		}
+
+		const resource = {
+			title: /([^\/\\])+$/.exec(filename)[0], mimeType
+		};
 
 		if (folderId) {
 			resource.parents = [
@@ -186,19 +192,29 @@ export default class GoogleDrive {
 				const deleteExisting = this.deleteAllCommand(drive, auth, filename, folderId);
 
 				return Promise.all([bufferPromise, deleteExisting])
-					.spread(buffer => this.uploadCommand(drive, auth, mimeType, buffer, resource));
+					.spread(buffer => new Promise( (resolve, reject) => {
+						drive.files
+							.insert({
+								resource,
+								media: { mimeType, body: buffer },
+								auth: auth
+							}, (err, client) => err && reject(err) || resolve(client));
+					}));
 			});
 	}
 
 	createFolder(foldername, folderId) {
-		return this.withContext( (drive, auth) => drive.files.insert(maybeHasParent({
-			resource: {
-				title: foldername,
-				mimeType: 'application/vnd.google-apps.folder'
-			},
-			auth: auth,
-			fields: [ 'id' ]
-		}, folderId)));
+		return this.withContext( (drive, auth) => new Promise( (resolve, reject) => {
+			drive.files.insert(
+				{
+					resource: maybeHasParent({
+						title: foldername,
+						mimeType: 'application/vnd.google-apps.folder'
+					}, folderId),
+					auth
+				}, (err, resp) => err && reject(err) || resolve(resp)
+			);
+		}));
 	}
 
 	search(name, folderId) {
