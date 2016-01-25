@@ -7,8 +7,8 @@ Written with support for ES7 async/await in mind. Refer to `test.js` for example
 Provides a very basic API to upload files onto google drive via a constructed GoogleDriver instance.
 
 ```
-	import GoogleDriver from 'google-driver';
-	const googleDriver = new GoogleDrive({ CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN });
+import GoogleDriver from 'google-driver';
+const googleDriver = new GoogleDrive({ CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN });
 ```
 
 In all instances, if `folderId` is not specified, operations are assumed to take place in the root folder.
