@@ -192,27 +192,34 @@ export default class GoogleDrive {
 				const deleteExisting = this.deleteAllCommand(drive, auth, filename, folderId);
 
 				return Promise.all([bufferPromise, deleteExisting])
-					.spread(buffer => new Promise( (resolve, reject) => {
-						drive.files
-							.insert({
-								resource,
-								media: { mimeType, body: buffer },
-								auth: auth
-							}, (err, client) => err && reject(err) || resolve(client));
-					}));
+					.spread(buffer => new Promise( (resolve, reject) => drive.files.insert({
+						resource,
+						media: { mimeType, body: buffer },
+						auth: auth}, (err, resp) => err && reject(err) || resolve(resp))
+					));
 			});
 	}
 
-	createFolder(foldername, folderId) {
+	createFolder(title, folderId) {
 		return this.withContext( (drive, auth) => new Promise( (resolve, reject) => {
-			drive.files.insert(
-				{
-					resource: maybeHasParent({
-						title: foldername,
-						mimeType: 'application/vnd.google-apps.folder'
-					}, folderId),
-					auth
-				}, (err, resp) => err && reject(err) || resolve(resp)
+
+			// search for an existing folder first
+			this.searchCommand(drive, auth, title, folderId)
+				.then( resources => resources.filter( _ => _.title === title && _.mimeType === 'application/vnd.google-apps.folder'))
+				.then( existing => {
+					if (existing[0]) {
+						console.log(`${title} folder already exists, not creating.`);
+						return resolve(existing[0]);
+					} else {
+						return drive.files.insert({
+							resource: maybeHasParent({
+								title,
+								mimeType: 'application/vnd.google-apps.folder'
+							}, folderId),
+							auth
+						}, (err, resp) => err && reject(err) || resolve(resp));
+					}
+				}
 			);
 		}));
 	}

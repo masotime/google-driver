@@ -1,4 +1,4 @@
-/* global describe, it, before, after */
+/* global describe, it, after */
 import assert from 'assert';
 import GoogleDrive from './src/index';
 import uuid from 'node-uuid';
@@ -75,10 +75,16 @@ describe('File I/O', () => {
 			files.forEach(file => assert.equal(file.title, title, `Expected title = ${title} but got ${file && file.title}`));
 		}));
 
-		it(`should be able to create a folder named ${title}`, asyncMocha( async() => {
+		it(`should be able to create a folder named ${title}`, asyncMocha( async () => {
 			const createResult = await googleDriver.createFolder(title);
 			const files = await googleDriver.search(title);
-			assert.ok(files.some( file => file.id === createResult.id && file.title === title ));
+			assert.ok(files.some( file => file.id === createResult.id && file.title === title ), `Expected to find the folder ${title} that was just created`);
+		}));
+
+		it(`will not create a folder if it already exists`, asyncMocha( async () => {
+			const result1 = await googleDriver.createFolder(title);
+			const result2 = await googleDriver.createFolder(title);
+			assert.equal(result1.id, result2.id, `Expected creating the same folder ${title} twice to return the same resource id`);
 		}));
 
 	});
